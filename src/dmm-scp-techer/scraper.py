@@ -42,11 +42,17 @@ def scrape_teacher_status(teacher_url: str) -> str:
 def has_reservation_available(text: str) -> bool:
     """
     テキストから「予約可」（1回以上の繰り返しを含む）を探す
+    ただし「予約可能」「現在予約可」などの複合語は除外
     
-    - 「予約可」（単独）
-    - 「予約可予約可」（繰り返し）
-    - 「予約可予約可予約可」（複数繰り返し）
-    いずれもマッチしたら True を返す
+    対応する例：
+    - 「予約可」（単独）✅
+    - 「予約可予約可」（繰り返し）✅
+    - 「予約可予約可予約可」（複数繰り返し）✅
+    - 「予約可 です」（スペース区切り）✅
+    
+    除外する例：
+    - 「予約可能数」❌
+    - 「現在予約可」❌
     
     Args:
         text: 検索対象のテキスト
@@ -54,9 +60,9 @@ def has_reservation_available(text: str) -> bool:
     Returns:
         「予約可」が見つかったかどうか
     """
-    # 「予約可」の1回以上の繰り返しを検索
-    # 単独でも、繰り返しでも両方検出
-    pattern = r"予約可+"
+    # 「予約可」を検出するが、直後に「能」がない場合のみ
+    # (?!能) = ネガティブルックアヘッド：直後に「能」がないことを確認
+    pattern = r"予約可(?!能)"
     matches = re.findall(pattern, text)
     return bool(matches)
 
@@ -83,14 +89,14 @@ def send_discord_notification(webhook_url: str, message: str) -> None:
 
 
 def main(
-    teacher_url: str = "https://eikaiwa.dmm.com/teacher/index/51118/",
+    teacher_urls: Optional[list] = None,
     webhook_url: Optional[str] = None
 ) -> None:
     """
-    メイン処理：スクレイピングと通知を実行
+    メイン処理：複数の先生について予約状況をスクレイピングして通知を実行
     
     Args:
-        teacher_url: スクレイピング対象の先生のURL
+        teacher_urls: スクレイピング対象の先生のURLリスト。指定されない場合はデフォルトを使用
         webhook_url: DiscordウェブフックのURL。指定されない場合は環境変数から取得
     """
     # .env ファイルを読み込む
@@ -109,34 +115,57 @@ def main(
                 ".env ファイルまたは環境変数に設定してください。"
             )
     
-    print(f"[{datetime.now().isoformat()}] スクレイピング開始: {teacher_url}")
+    # デフォルトのURLを設定
+    if teacher_urls is None:
+        teacher_urls = [
+            "https://eikaiwa.dmm.com/teacher/index/51118/",
+            "https://eikaiwa.dmm.com/teacher/index/55373/",
+            "https://eikaiwa.dmm.com/teacher/index/50613/",
+        ]
+    
+    print(f"[{datetime.now().isoformat()}] スクレイピング開始: {len(teacher_urls)}名の先生")
+    
+    available_urls = []  # 予約可が見つかったURLを記録
     
     try:
-        # スクレイピング
-        page_text = scrape_teacher_status(teacher_url)
+        # 各URLをスクレイピング
+        for teacher_url in teacher_urls:
+            try:
+                print(f"  - {teacher_url} を確認中...")
+                page_text = scrape_teacher_status(teacher_url)
+                
+                # 「予約可」を確認
+                if has_reservation_available(page_text):
+                    available_urls.append(teacher_url)
+                    print(f"    ✅ 予約可を検出")
+                else:
+                    print(f"    予約可は見つかりませんでした")
+                    
+            except requests.RequestException as e:
+                print(f"    ⚠️  スクレイピング失敗: {str(e)}")
+                continue
         
-        # 「予約可」を確認
-        if has_reservation_available(page_text):
-            message = "🎯 予約可"
-            print(f"[{datetime.now().isoformat()}] 予約可を検出しました")
+        # 予約可が見つかった場合のみ通知
+        if available_urls:
+            message = "🎯 予約可の先生が見つかりました！\n\n"
+            message += "\n".join([f"• {url}" for url in available_urls])
+            
+            print(f"[{datetime.now().isoformat()}] 予約可を検出: {len(available_urls)}名")
             
             # Discord通知を送信
             send_discord_notification(webhook_url, message)
             print(f"[{datetime.now().isoformat()}] Discord通知を送信しました")
         else:
-            print(f"[{datetime.now().isoformat()}] 予約可は検出されませんでした")
+            print(f"[{datetime.now().isoformat()}] すべての先生について予約可は見つかりませんでした")
             
-    except requests.RequestException as e:
-        error_msg = f"❌ スクレイピング失敗: {str(e)}"
+    except Exception as e:
+        error_msg = f"❌ スクレイピング処理中にエラーが発生: {str(e)}"
         print(f"[{datetime.now().isoformat()}] {error_msg}")
         # エラーをDiscordに送信（オプション）
         try:
             send_discord_notification(webhook_url, error_msg)
         except Exception as notify_error:
             print(f"エラー通知の送信に失敗しました: {notify_error}")
-        raise
-    except Exception as e:
-        print(f"[{datetime.now().isoformat()}] 予期しないエラー: {e}")
         raise
 
 
