@@ -2,8 +2,8 @@ name: DMM英会話 予約状況確認
 
 on:
     schedule:
-        # 5分ごとに実行
-        - cron: "*/5 * * * *"
+        # 10分ごとに実行
+        - cron: "*/10 * * * *"
 
     # 手動トリガー用
     workflow_dispatch:
