@@ -31,6 +31,13 @@ jobs:
                   python -m pip install --upgrade pip
                   pip install -e .
 
+            - name: Debug directory
+              run: |
+                  pwd
+                  ls -la
+                  ls -la src/
+                  ls -la src/dmm_scp_techer/
+
             - name: Run scraper
               run: python src/dmm_scp_techer/scraper.py
 
