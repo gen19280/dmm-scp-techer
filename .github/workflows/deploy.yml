@@ -32,7 +32,7 @@ jobs:
                   pip install -e .
 
             - name: Run scraper
-              run: python -m src.dmm_scp_techer.scraper
+              run: python -m src.scraper
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
