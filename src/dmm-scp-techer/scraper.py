@@ -1,26 +1,26 @@
 """
-DMM英会話の先生の予約状況をスクレイピングしてDiscordに通知するモジュール
+DMM英会話の先生の予約状況をスクレイピングして、予約可能な講師の一覧を生成するモジュール
 """
 
 import os
-import re
+import json
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
 from pathlib import Path
 from dotenv import load_dotenv
 
 
-def scrape_teacher_status(teacher_url: str) -> str:
+def scrape_teacher_info(teacher_url: str) -> Dict[str, any]:
     """
-    DMM英会話の先生情報ページをスクレイピングして、本文を取得する
+    DMM英会話の先生情報ページをスクレイピングして、先生の情報を取得する
     
     Args:
         teacher_url: スクレイピング対象のURL
         
     Returns:
-        ページのテキスト内容
+        先生の情報（名前、URL、予約可かどうか）
         
     Raises:
         requests.RequestException: HTTPリクエストに失敗した場合
@@ -34,141 +34,131 @@ def scrape_teacher_status(teacher_url: str) -> str:
     
     soup = BeautifulSoup(response.content, "html.parser")
     
-    # テキスト化して返す
-    text = soup.get_text()
-    return text
+    # 先生の名前を取得（ページタイトルから）
+    title = soup.find('title')
+    if title:
+        title_text = title.text.strip()
+        # "講師名 の講師詳細 - DMM英会話" から講師名を抽出
+        if 'の講師詳細' in title_text:
+            name = title_text.split('の講師詳細')[0]
+        else:
+            name = title_text.split(' | ')[0]
+    else:
+        name = "Unknown"
+    
+    # 予約可かどうかをチェック
+    reservation_available = soup.find('a', {'data-popup': 'cancelled_pop_up'}, string='予約可') is not None
+    
+    return {
+        'name': name,
+        'url': teacher_url,
+        'available': reservation_available
+    }
 
 
-def has_reservation_available(text: str) -> bool:
+def scrape_all_teachers(teacher_urls: List[str]) -> List[Dict[str, any]]:
     """
-    テキストから「予約可」（1回以上の繰り返しを含む）を探す
-    ただし「予約可能」「現在予約可」などの複合語は除外
-    
-    対応する例：
-    - 「予約可」（単独）✅
-    - 「予約可予約可」（繰り返し）✅
-    - 「予約可予約可予約可」（複数繰り返し）✅
-    - 「予約可 です」（スペース区切り）✅
-    
-    除外する例：
-    - 「予約可能数」❌
-    - 「現在予約可」❌
+    複数の先生の情報をスクレイピングする
     
     Args:
-        text: 検索対象のテキスト
+        teacher_urls: スクレイピング対象のURLリスト
         
     Returns:
-        「予約可」が見つかったかどうか
+        先生情報のリスト
     """
-    # 「予約可」を検出するが、直後に「能」がない場合のみ
-    # (?!能) = ネガティブルックアヘッド：直後に「能」がないことを確認
-    pattern = r"予約可(?!能)"
-    matches = re.findall(pattern, text)
-    return bool(matches)
+    teachers = []
+    for url in teacher_urls:
+        try:
+            print(f"  - {url} を確認中...")
+            info = scrape_teacher_info(url)
+            teachers.append(info)
+            status = '予約可' if info['available'] else '予約不可'
+            print(f"    ✅ {info['name']}: {status}")
+        except requests.RequestException as e:
+            print(f"    ⚠️  スクレイピング失敗: {str(e)}")
+            teachers.append({
+                'name': 'Error',
+                'url': url,
+                'available': False
+            })
+        except Exception as e:
+            print(f"    ⚠️  エラー: {str(e)}")
+            teachers.append({
+                'name': 'Error',
+                'url': url,
+                'available': False
+            })
+    
+    return teachers
 
 
-def send_discord_notification(webhook_url: str, message: str) -> None:
+def load_teacher_urls(config_path: Optional[str] = None) -> List[str]:
     """
-    Discordウェブフックにメッセージを送信する
+    設定ファイルから先生のURLリストを読み込む
     
     Args:
-        webhook_url: DiscordウェブフックのURL
-        message: 送信するメッセージ内容
+        config_path: 設定ファイルのパス
         
-    Raises:
-        requests.RequestException: ウェブフックへのリクエストに失敗した場合
+    Returns:
+        URLリスト
     """
-    payload = {
-        "content": message,
-        "username": "DMM英会話 予約状況",
-        "tts": False
+    if config_path is None:
+        config_path = Path(__file__).parent.parent.parent / "teacher_urls.json"
+    
+    if config_path.exists():
+        with open(config_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data.get('urls', [])
+    else:
+        # デフォルトのURL
+        return [
+            "https://eikaiwa.dmm.com/teacher/index/50477/",
+            "https://eikaiwa.dmm.com/teacher/index/43794/",
+            "https://eikaiwa.dmm.com/teacher/index/40406/",
+        ]
+
+
+def save_teachers_data(teachers: List[Dict[str, any]], output_path: str) -> None:
+    """
+    先生のデータをJSONファイルに保存
+    
+    Args:
+        teachers: 先生情報のリスト
+        output_path: 出力ファイルのパス
+    """
+    data = {
+        'last_updated': datetime.now().isoformat(),
+        'teachers': teachers
     }
     
-    response = requests.post(webhook_url, json=payload)
-    response.raise_for_status()
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 def main(
-    teacher_urls: Optional[list] = None,
-    webhook_url: Optional[str] = None
+    output_path: str = "frontend/public/data.json",
+    config_path: Optional[str] = None
 ) -> None:
     """
-    メイン処理：複数の先生について予約状況をスクレイピングして通知を実行
+    メイン処理：先生の情報をスクレイピングしてJSONファイルに保存
     
     Args:
-        teacher_urls: スクレイピング対象の先生のURLリスト。指定されない場合はデフォルトを使用
-        webhook_url: DiscordウェブフックのURL。指定されない場合は環境変数から取得
+        output_path: 出力JSONファイルのパス
+        config_path: 設定ファイルのパス
     """
-    # .env ファイルを読み込む
-    env_path = Path(__file__).parent.parent.parent / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
-    else:
-        load_dotenv()  # デフォルトの .env を探す
+    print(f"[{datetime.now().isoformat()}] スクレイピング開始")
     
-    # webhook_urlが指定されていない場合は環境変数から取得
-    if webhook_url is None:
-        webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
-        if not webhook_url:
-            raise ValueError(
-                "DISCORD_WEBHOOK_URLが指定されていません。"
-                ".env ファイルまたは環境変数に設定してください。"
-            )
+    # URLリストを読み込み
+    teacher_urls = load_teacher_urls(config_path)
+    print(f"対象URL数: {len(teacher_urls)}")
     
-    # デフォルトのURLを設定
-    if teacher_urls is None:
-        teacher_urls = [
-            "https://eikaiwa.dmm.com/teacher/index/43794/",
-            "https://eikaiwa.dmm.com/teacher/index/40406/",
-            "https://eikaiwa.dmm.com/teacher/index/52910/",
-            "https://eikaiwa.dmm.com/teacher/index/55373/",
-            "https://eikaiwa.dmm.com/teacher/index/50613/",
-        ]
+    # スクレイピング実行
+    teachers = scrape_all_teachers(teacher_urls)
     
-    print(f"[{datetime.now().isoformat()}] スクレイピング開始: {len(teacher_urls)}名の先生")
+    # 結果を保存
+    save_teachers_data(teachers, output_path)
     
-    available_urls = []  # 予約可が見つかったURLを記録
-    
-    try:
-        # 各URLをスクレイピング
-        for teacher_url in teacher_urls:
-            try:
-                print(f"  - {teacher_url} を確認中...")
-                page_text = scrape_teacher_status(teacher_url)
-                
-                # 「予約可」を確認
-                if has_reservation_available(page_text):
-                    available_urls.append(teacher_url)
-                    print(f"    ✅ 予約可を検出")
-                else:
-                    print(f"    予約可は見つかりませんでした")
-                    
-            except requests.RequestException as e:
-                print(f"    ⚠️  スクレイピング失敗: {str(e)}")
-                continue
-        
-        # 予約可が見つかった場合のみ通知
-        if available_urls:
-            message = "🎯 予約可の先生が見つかりました！\n\n"
-            message += "\n".join([f"• {url}" for url in available_urls])
-            
-            print(f"[{datetime.now().isoformat()}] 予約可を検出: {len(available_urls)}名")
-            
-            # Discord通知を送信
-            send_discord_notification(webhook_url, message)
-            print(f"[{datetime.now().isoformat()}] Discord通知を送信しました")
-        else:
-            print(f"[{datetime.now().isoformat()}] すべての先生について予約可は見つかりませんでした")
-            
-    except Exception as e:
-        error_msg = f"❌ スクレイピング処理中にエラーが発生: {str(e)}"
-        print(f"[{datetime.now().isoformat()}] {error_msg}")
-        # エラーをDiscordに送信（オプション）
-        try:
-            send_discord_notification(webhook_url, error_msg)
-        except Exception as notify_error:
-            print(f"エラー通知の送信に失敗しました: {notify_error}")
-        raise
+    print(f"[{datetime.now().isoformat()}] スクレイピング完了。結果を {output_path} に保存しました")
 
 
 if __name__ == "__main__":

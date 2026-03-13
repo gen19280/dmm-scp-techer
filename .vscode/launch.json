@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Frontend: Launch Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173/dmm-scp-techer/",
+            "webRoot": "${workspaceFolder}/frontend/src",
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/*"
+            },
+            "preLaunchTask": "npm: dev (frontend)"
+        },
+        {
+            "name": "Frontend: Launch Edge",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://localhost:5173/dmm-scp-techer/",
+            "webRoot": "${workspaceFolder}/frontend/src",
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/*"
+            },
+            "preLaunchTask": "npm: dev (frontend)"
+        }
+    ]
+}

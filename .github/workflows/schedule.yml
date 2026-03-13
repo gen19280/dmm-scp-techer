@@ -31,7 +31,7 @@ jobs:
                   DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
                   PYTHONPATH: ${{ github.workspace }}/src/dmm-scp-techer
               run: |
-                  python -c "from scraper import main; main()"
+                  python -c "from scraper_discord import main; main()"
 
             - name: 失敗時の通知
               if: failure()

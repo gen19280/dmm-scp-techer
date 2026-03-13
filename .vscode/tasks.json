@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "command": "cd frontend; npm run dev",
+            "group": "build",
+            "presentation": {
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "isBackground": true,
+            "problemMatcher": [],
+            "label": "npm: dev (frontend)"
+        }
+    ]
+}

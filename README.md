@@ -1,53 +1,87 @@
 # DMM英会話 予約状況スクレイピングツール
 
-DMM英会話の先生のページをスクレイピングして、「予約可」という文字が見つかった場合、Discordウェブフックで通知するツールです。
+DMM英会話の先生のページをスクレイピングして、予約可能な講師の一覧を表示するWebアプリケーションです。GitHub Pagesでホスティングされます。
 
 ## 機能
 
 - 🔍 DMM英会話の先生ページをスクレイピング
-- 🎯 「予約可」（厳格に3文字）を検出
-- 💬 Discord ウェブフックで即座に通知
-- ⏰ GitHub Actions で定期実行可能
+- 🎯 `data-popup="cancelled_pop_up">予約可</a>` の要素を検出
+- 🌐 予約可能な講師の一覧をWebページで表示
+- ⏰ GitHub Actions で定期的にデータを更新
+- 📱 レスポンシブデザイン
 
 ## インストール
 
-### 1. 依存関係をインストール
+### ローカル開発
 
+1. Python 環境をセットアップ
 ```bash
-pip install -r requirements.txt
-# または
-pip install requests beautifulsoup4
+pip install -e .
 ```
 
-### 2. 環境変数を設定
-
+2. フロントエンドの依存関係をインストール
 ```bash
-export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+cd frontend
+npm install
 ```
 
-## 使用方法
-
-### ローカルで実行
-
+3. スクレイピングを実行
 ```bash
-# モジュールとして実行
-python -m dmm_scp_techer
-
-# または Python スクリプトとして
-python -m dmm_scp_techer.scraper
+python -m src.dmm_scp_techer.scraper
 ```
 
-### GitHub Actions で自動実行
+4. フロントエンドを起動
+```bash
+cd frontend
+npm run dev
+```
 
-1. リポジトリの Settings → Secrets and variables → Actions
-2. `DISCORD_WEBHOOK_URL` というシークレットを追加
-3. ワークフローは毎日 9:00, 12:00, 18:00, 21:00 JST に実行されます
+## GitHub Pages デプロイ
 
-スケジュール変更は `.github/workflows/schedule.yml` の `cron` を編集してください。
+このプロジェクトはGitHub Actionsを使って自動的にGitHub Pagesにデプロイされます。
+
+### セットアップ
+
+1. リポジトリの Settings → Pages
+2. Source を "GitHub Actions" に設定
+3. mainブランチにプッシュすると自動デプロイ
+
+### ワークフロー
+
+- `main` ブランチにプッシュされると自動的にビルド・デプロイ
+- スクレイピング → データ生成 → フロントエンドビルド → GitHub Pages デプロイ
 
 ## カスタマイズ
 
 ### スクレイピング対象 URL の変更
+
+`teacher_urls.json` を編集して対象の講師URLを追加・変更してください。
+
+```json
+{
+  "urls": [
+    "https://eikaiwa.dmm.com/teacher/index/50477/",
+    "https://eikaiwa.dmm.com/teacher/index/43794/"
+  ]
+}
+```
+
+### デザインのカスタマイズ
+
+`frontend/src/App.css` を編集してスタイルを変更してください。
+
+## 技術スタック
+
+- **バックエンド**: Python + BeautifulSoup4
+- **フロントエンド**: React + TypeScript + Vite
+- **デプロイ**: GitHub Pages + GitHub Actions
+- **データ形式**: JSON
+
+## 注意事項
+
+- このツールはDMM英会話の利用規約を遵守してください
+- スクレイピングはサーバーに負荷をかける可能性があるため、実行間隔に注意してください
+- GitHub Actionsの無料枠内で使用することを推奨します
 
 `scraper.py` の `main()` 関数の引数を変更：
 

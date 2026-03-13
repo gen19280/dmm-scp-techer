@@ -1,0 +1,20 @@
+{
+  "last_updated": "2026-03-13T11:21:40.092140",
+  "teachers": [
+    {
+      "name": "Satsuki",
+      "url": "https://eikaiwa.dmm.com/teacher/index/50477/",
+      "available": true
+    },
+    {
+      "name": "Mami",
+      "url": "https://eikaiwa.dmm.com/teacher/index/43794/",
+      "available": false
+    },
+    {
+      "name": "Tommy",
+      "url": "https://eikaiwa.dmm.com/teacher/index/40406/",
+      "available": false
+    }
+  ]
+}
