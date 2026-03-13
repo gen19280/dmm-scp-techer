@@ -118,7 +118,9 @@ def main(
     # デフォルトのURLを設定
     if teacher_urls is None:
         teacher_urls = [
-            "https://eikaiwa.dmm.com/teacher/index/51118/",
+            "https://eikaiwa.dmm.com/teacher/index/43794/",
+            "https://eikaiwa.dmm.com/teacher/index/40406/",
+            "https://eikaiwa.dmm.com/teacher/index/52910/",
             "https://eikaiwa.dmm.com/teacher/index/55373/",
             "https://eikaiwa.dmm.com/teacher/index/50613/",
         ]
