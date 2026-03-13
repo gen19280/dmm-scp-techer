@@ -4,6 +4,7 @@ import './App.css';
 interface Teacher {
   name: string;
   url: string;
+  image_url: string | null;
   available: boolean;
 }
 
@@ -64,10 +65,15 @@ function App() {
             <ul className="teacher-list available">
               {availableTeachers.map((teacher, index) => (
                 <li key={index} className="teacher-item">
-                  <a href={teacher.url} target="_blank" rel="noopener noreferrer">
-                    {teacher.name}
-                  </a>
-                  <span className="status available">予約可</span>
+                  {teacher.image_url && (
+                    <img src={teacher.image_url} alt={teacher.name} className="teacher-image" />
+                  )}
+                  <div className="teacher-info">
+                    <a href={teacher.url} target="_blank" rel="noopener noreferrer">
+                      {teacher.name}
+                    </a>
+                    <span className="status available">予約可</span>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -81,10 +87,15 @@ function App() {
           <ul className="teacher-list unavailable">
             {unavailableTeachers.map((teacher, index) => (
               <li key={index} className="teacher-item">
-                <a href={teacher.url} target="_blank" rel="noopener noreferrer">
-                  {teacher.name}
-                </a>
-                <span className="status unavailable">予約不可</span>
+                {teacher.image_url && (
+                  <img src={teacher.image_url} alt={teacher.name} className="teacher-image" />
+                )}
+                <div className="teacher-info">
+                  <a href={teacher.url} target="_blank" rel="noopener noreferrer">
+                    {teacher.name}
+                  </a>
+                  <span className="status unavailable">予約不可</span>
+                </div>
               </li>
             ))}
           </ul>

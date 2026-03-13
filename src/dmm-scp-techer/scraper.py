@@ -46,12 +46,17 @@ def scrape_teacher_info(teacher_url: str) -> Dict[str, any]:
     else:
         name = "Unknown"
     
+    # 顔写真のURLを取得
+    img_tag = soup.find('img', class_='profile-pic')
+    image_url = img_tag['src'] if img_tag and 'src' in img_tag.attrs else None
+    
     # 予約可かどうかをチェック
     reservation_available = soup.find('a', {'data-popup': 'cancelled_pop_up'}, string='予約可') is not None
     
     return {
         'name': name,
         'url': teacher_url,
+        'image_url': image_url,
         'available': reservation_available
     }
 
@@ -112,9 +117,11 @@ def load_teacher_urls(config_path: Optional[str] = None) -> List[str]:
     else:
         # デフォルトのURL
         return [
-            "https://eikaiwa.dmm.com/teacher/index/50477/",
             "https://eikaiwa.dmm.com/teacher/index/43794/",
             "https://eikaiwa.dmm.com/teacher/index/40406/",
+            "https://eikaiwa.dmm.com/teacher/index/52910/",
+            "https://eikaiwa.dmm.com/teacher/index/55373/",
+            "https://eikaiwa.dmm.com/teacher/index/50613/",
         ]
 
 

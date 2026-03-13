@@ -1,19 +1,22 @@
 {
-  "last_updated": "2026-03-13T11:21:40.092140",
+  "last_updated": "2026-03-13T12:08:43.534440",
   "teachers": [
     {
       "name": "Satsuki",
       "url": "https://eikaiwa.dmm.com/teacher/index/50477/",
+      "image_url": "https://image.eikaiwa.dmm.com/teacher/53148/1_202501211458.png",
       "available": true
     },
     {
       "name": "Mami",
       "url": "https://eikaiwa.dmm.com/teacher/index/43794/",
+      "image_url": "https://image.eikaiwa.dmm.com/teacher/45982/1_202105051516.png",
       "available": false
     },
     {
       "name": "Tommy",
       "url": "https://eikaiwa.dmm.com/teacher/index/40406/",
+      "image_url": "https://image.eikaiwa.dmm.com/teacher/42276/1_202009251548.png",
       "available": false
     }
   ]

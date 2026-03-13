@@ -50,7 +50,6 @@ section h2 {
 
 .teacher-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
     margin-bottom: 8px;
@@ -64,14 +63,28 @@ section h2 {
     transform: translateY(-2px);
 }
 
-.teacher-item a {
+.teacher-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+}
+
+.teacher-info {
+    flex-grow: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.teacher-info a {
     text-decoration: none;
     color: #007bff;
     font-weight: 500;
-    flex-grow: 1;
 }
 
-.teacher-item a:hover {
+.teacher-info a:hover {
     text-decoration: underline;
 }
 
