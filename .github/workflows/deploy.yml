@@ -32,7 +32,7 @@ jobs:
                   pip install -e .
 
             - name: Run scraper
-              run: PYTHONPATH=${{ github.workspace }}/src python -m dmm_scp_techer.scraper
+              run: python src/dmm_scp_techer/scraper.py
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
