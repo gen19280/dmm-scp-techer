@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase/app';
 import {
   getAuth,
   onAuthStateChanged,
-  signInWithRedirect,
+  signInWithPopup,
   GoogleAuthProvider
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
@@ -39,6 +39,7 @@ function App() {
   const [unavailableTeachers, setUnavailableTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true); // data loading state
   const [authLoading, setAuthLoading] = useState(true); // auth state
+  const [authAttempted, setAuthAttempted] = useState(false); // popup once
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -67,17 +68,13 @@ function App() {
   useEffect(() => {
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
     const unsubscribe = onAuthStateChanged(
       auth,
       (currentUser: User | null) => {
         if (!currentUser) {
-          setAuthLoading(true);
-          signInWithRedirect(auth, provider).catch((signInErr: any) => {
-            setAuthError(signInErr?.message || 'サインイン中にエラーが発生しました');
-            setAuthLoading(false);
-          });
+          setUser(null);
+          setAuthLoading(false);
           return;
         }
 
@@ -94,12 +91,6 @@ function App() {
         setAuthError(null);
         setAuthLoading(false);
         fetchTeacherData();
-
-        // 認証認可完了後に指定のリダイレクト先へ移動
-        const targetUrl = 'https://gen19280.github.io/dmm-scp-techer/';
-        if (window.location.href !== targetUrl) {
-          window.location.href = targetUrl;
-        }
       },
       (authErr: Error) => {
         setAuthError(authErr.message || '認証状態の処理中にエラーが発生しました');
@@ -109,6 +100,27 @@ function App() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
+
+    if (!authLoading && !user && !authAttempted && !accessDenied) {
+      setAuthAttempted(true);
+      signInWithPopup(auth, provider)
+        .then(result => {
+          const signedUser = result.user;
+          if (signedUser.email !== 'saryupointo@gmail.com') {
+            setAccessDenied(true);
+            setAuthError('このアカウントではアクセスできません。');
+          }
+        })
+        .catch(err => {
+          setAuthError(err?.message || 'サインイン中にエラーが発生しました');
+          setAuthLoading(false);
+        });
+    }
+  }, [authLoading, user, authAttempted, accessDenied]);
 
   const handleDragStart = (section: SectionType, index: number) => (event: React.DragEvent<HTMLLIElement>) => {
     setDragging({ section, index });
