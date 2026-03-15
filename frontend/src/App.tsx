@@ -94,6 +94,12 @@ function App() {
         setAuthError(null);
         setAuthLoading(false);
         fetchTeacherData();
+
+        // 認証認可完了後に指定のリダイレクト先へ移動
+        const targetUrl = 'https://gen19280.github.io/dmm-scp-techer/';
+        if (window.location.href !== targetUrl) {
+          window.location.href = targetUrl;
+        }
       },
       (authErr: Error) => {
         setAuthError(authErr.message || '認証状態の処理中にエラーが発生しました');
