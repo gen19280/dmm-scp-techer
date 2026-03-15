@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import { initializeApp } from 'firebase/app';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithRedirect,
+  GoogleAuthProvider
+} from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 interface Teacher {
   name: string;
@@ -15,32 +23,85 @@ interface Data {
 
 type SectionType = 'available' | 'unavailable';
 
+const firebaseConfig = {
+  apiKey: 'AIzaSyCebgViIftPo9n8vA4BEHHOY7rYnob29Mc',
+  authDomain: 'dmm-scp-techer.firebaseapp.com',
+  projectId: 'dmm-scp-techer',
+  storageBucket: 'dmm-scp-techer.firebasestorage.app',
+  messagingSenderId: '769506593095',
+  appId: '1:769506593095:web:9dc12e1e6ebd7b10f7e462',
+  measurementId: 'G-KD1LKYQRHZ'
+};
+
 function App() {
   const [data, setData] = useState<Data | null>(null);
   const [availableTeachers, setAvailableTeachers] = useState<Teacher[]>([]);
   const [unavailableTeachers, setUnavailableTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // data loading state
+  const [authLoading, setAuthLoading] = useState(true); // auth state
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [dragging, setDragging] = useState<{ section: SectionType; index: number } | null>(null);
 
+  const fetchTeacherData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(import.meta.env.BASE_URL + 'data.json');
+      if (!response.ok) {
+        throw new Error('データの取得に失敗しました');
+      }
+      const result = (await response.json()) as Data;
+      setData(result);
+      setAvailableTeachers(result.teachers.filter(teacher => teacher.available));
+      setUnavailableTeachers(result.teachers.filter(teacher => !teacher.available));
+    } catch (err: any) {
+      setError(err.message || 'データの読み込み中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch(import.meta.env.BASE_URL + 'data.json')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('データの取得に失敗しました');
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser: User | null) => {
+        if (!currentUser) {
+          setAuthLoading(true);
+          signInWithRedirect(auth, provider).catch((signInErr: any) => {
+            setAuthError(signInErr?.message || 'サインイン中にエラーが発生しました');
+            setAuthLoading(false);
+          });
+          return;
         }
-        return response.json();
-      })
-      .then((result: Data) => {
-        setData(result);
-        setAvailableTeachers(result.teachers.filter(teacher => teacher.available));
-        setUnavailableTeachers(result.teachers.filter(teacher => !teacher.available));
-        setLoading(false);
-      })
-      .catch(error => {
-        setError(error.message);
-        setLoading(false);
-      });
+
+        setUser(currentUser);
+
+        if (currentUser.email !== 'saryupointo@gmail.com') {
+          setAccessDenied(true);
+          setAuthError('このアカウントではアクセスできません。');
+          setAuthLoading(false);
+          return;
+        }
+
+        setAccessDenied(false);
+        setAuthError(null);
+        setAuthLoading(false);
+        fetchTeacherData();
+      },
+      (authErr: Error) => {
+        setAuthError(authErr.message || '認証状態の処理中にエラーが発生しました');
+        setAuthLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   const handleDragStart = (section: SectionType, index: number) => (event: React.DragEvent<HTMLLIElement>) => {
@@ -79,8 +140,20 @@ function App() {
     setDragging(null);
   };
 
+  if (authLoading) {
+    return <div className="App">認証処理中...</div>;
+  }
+
+  if (authError) {
+    return <div className="App">認証エラー: {authError}</div>;
+  }
+
+  if (accessDenied) {
+    return <div className="App">アクセス拒否: このサイトにアクセスできるのは saryupointo@gmail.com のみです。</div>;
+  }
+
   if (loading) {
-    return <div className="App">読み込み中...</div>;
+    return <div className="App">データ読み込み中...</div>;
   }
 
   if (error) {
@@ -96,6 +169,7 @@ function App() {
       <header className="App-header">
         <h1>DMM英会話 予約可能講師一覧</h1>
         <p>最終更新: {new Date(data.last_updated).toLocaleString('ja-JP')}</p>
+        {user && <p>ログインユーザー: {user.email}</p>}
       </header>
 
       <main>
