@@ -5,6 +5,7 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithPopup,
+  signOut,
   GoogleAuthProvider
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
@@ -45,6 +46,23 @@ function App() {
   const [accessDenied, setAccessDenied] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [dragging, setDragging] = useState<{ section: SectionType; index: number } | null>(null);
+
+  const handleSignOut = async () => {
+    const auth = getAuth();
+    try {
+      await signOut(auth);
+      setUser(null);
+      setAccessDenied(false);
+      setAuthError(null);
+      setAuthAttempted(false);
+      setLoading(true);
+      setData(null);
+      setAvailableTeachers([]);
+      setUnavailableTeachers([]);
+    } catch (err: any) {
+      setAuthError(err?.message || 'サインアウト中にエラーが発生しました');
+    }
+  };
 
   const fetchTeacherData = async () => {
     setLoading(true);
@@ -188,6 +206,11 @@ function App() {
         <h1>DMM英会話 予約可能講師一覧</h1>
         <p>最終更新: {new Date(data.last_updated).toLocaleString('ja-JP')}</p>
         {user && <p>ログインユーザー: {user.email}</p>}
+        {user && (
+          <button className="signout-btn" onClick={handleSignOut}>
+            サインアウト
+          </button>
+        )}
       </header>
 
       <main>
