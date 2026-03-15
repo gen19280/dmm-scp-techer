@@ -98,13 +98,6 @@ function App() {
 
         setUser(currentUser);
 
-        if (currentUser.email !== 'saryupointo@gmail.com') {
-          setAccessDenied(true);
-          setAuthError('このアカウントではアクセスできません。');
-          setAuthLoading(false);
-          return;
-        }
-
         setAccessDenied(false);
         setAuthError(null);
         setAuthLoading(false);
@@ -128,10 +121,7 @@ function App() {
       signInWithPopup(auth, provider)
         .then(result => {
           const signedUser = result.user;
-          if (signedUser.email !== 'saryupointo@gmail.com') {
-            setAccessDenied(true);
-            setAuthError('このアカウントではアクセスできません。');
-          }
+          setUser(signedUser);
         })
         .catch(err => {
           setAuthError(err?.message || 'サインイン中にエラーが発生しました');
